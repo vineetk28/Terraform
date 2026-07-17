@@ -1,0 +1,18 @@
+1. For below snippet to run, we need to have a default VPC already defined in the AWS region.
+
+resource "aws_instance" "myec2" {
+    ami = "ami-002aab1cab5a08e35"
+    instance_type = "t2.micro"
+}
+
+
+If the default VPC does not exist, we get below error.
+
+╷
+│ Error: creating EC2 Instance: operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: 19deaea9-3821-401b-aba2-1ff47df016aa, api error VPCIdNotSpecified: No default VPC for this user. GroupName is only supported for EC2-Classic and default VPC.
+│
+│   with aws_instance.myec2,
+│   on first-ec2.tf line 5, in resource "aws_instance" "myec2":
+│    5: resource "aws_instance" "myec2" {
+│
+╵
