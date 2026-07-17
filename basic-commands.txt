@@ -3,6 +3,7 @@ terraform init:
 
 Downloads all plugins associated with the defined provider
 
+terraform plan:
 Shows what it will create or destroy as mentioned in the file.
 
 
