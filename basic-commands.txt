@@ -1,0 +1,10 @@
+terraform init:
+
+
+Downloads all plugins associated with the defined provider
+
+Shows what it will create or destroy as mentioned in the file.
+
+
+terraform apply:
+To actually apply the changes shown in plan.
