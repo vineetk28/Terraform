@@ -1,0 +1,174 @@
+terraform init:
+
+
+Downloads all plugins associated with the defined provider
+
+terraform plan:
+Shows what it will create or destroy as mentioned in the file.
+
+
+terraform apply:
+To actually apply the changes shown in plan.
+
+==
+
+when we run terraform init, plugins needed for the provider are automatically downloaded and saved locally in .terraform directory. size of .terraform ~~ 300 MB
+
+
+In below snippet, aws_instance is resource type and myec2 is a given local name. Local name can be anything. resource name is fixed. It is an identifier for a given resource and must be unique , for identification purpose.
+
+
+
+resource "aws_instance" "myec2" {
+    ami = "ami-00c39f71452c08778"
+    instance_type = "t2.micro"
+}
+
+Types of primary providers in terraform.
+
+official- owned,maintained by Hashicorp
+partner- owned, mainted by tech company , having partnership with Hashicorp
+communite-owned,maintained by Individual Contributors.
+
+Namespaces are used to help users identify the organization or publisher for the integration.
+
+official - hashicorp
+partner- third party org , eg akamai/akamai
+creatorco-dev/1password
+
+
+if you create infra via terraform. then delete it via AWS console. and then run terraform refersh, terraform will refresh the statefile as per the current infra state.
+
+
+if you run terraform destroy , ALL the resources which are part of the folder from which command has run will be destroyed.
+
+To delete only specific resource, add -target flag.
+
+terraform destroy -target aws_instance.myec2
+
+The -target option can be used to only focus Terraform's attention on just a subset of resources.
+
+Also, if we comment out the specific resource block ( which already exists in the actual infra ) , terraform will assume that we want to destroy that resource.
+
+terraform apply -auto-approve ( does not ask for user input yes/no to apply changes)
+
+State File: ( terraform.tfstate ). Its format is json. 
+Stores info about managed infra in a state file. 
+It is like a Database , storing infra spec.
+
+Note: Never modify state file manually. It can lead to file corruption and will make it difficult for terraform to track infra. Take its backup.
+
+eg if a new EC2 instance gets created via terraform, all that EC2 instance's config gets stored in the state file ( like instance-id, instance-type, sg, volume-type, private-ip etc)
+
+scenario:
+if there are two .tf files for creating EC2 instaces, having below contents:
+
+provider "aws" {
+  region     = "eu-west-2"
+}
+
+resource "aws_instance" "myec2" {
+    ami = "ami-002aab1cab5a08e35"
+    instance_type = "t2.micro"
+    subnet_id     = "subnet-092b16d9bceaefe8d"
+}
+
+
+and 
+
+
+provider "aws" {
+  region     = "eu-west-2"
+}
+
+resource "aws_instance" "myec3" {
+    ami = "ami-002aab1cab5a08e35"
+    instance_type = "t2.micro"
+    subnet_id     = "subnet-092b16d9bceaefe8d"
+}
+
+and we run terraform plan, it gives the error:
+
+╷
+│ Error: Duplicate provider configuration
+│
+│   on second-ec2.tf line 1:
+│    1: provider "aws" {
+│
+│ A default (non-aliased) provider configuration for "aws" was already given at first-ec2.tf:1,1-15. If multiple
+│ configurations are required, set the "alias" argument for alternative configurations.
+
+
+Resolution: Remove provider section from one of the .tf files.
+provider "aws" {
+  region     = "eu-west-2"
+}
+
+How it behaves: It will merge both the .tf files and create two EC2 instances myec2 and myec3.
+
+Note: Never rename terraform.tfstate file , as terraform will lose track of infra it created.
+
+
+Desired State:
+It is the configuration you write in terraform files ( .tf files ).
+
+Current State:
+Represents actual reality of the infra.
+
+Someone can change infra via console >> creating drift between these two states.
+
+Running terraform plan will first check current state and next , will check desired state( in .tf file ). Terraform will do a Reconciliation process and make the infra equal to the desired state.
+
+
+Note: When we run terraform plan, it refreshes the infra state.
+
+Note: Even if the instance is modified from console and is in stopped state, it will still be visible to terraform , as a change. On terraform apply , it will modify the instance and start the instance , with updated instance type.
+
+
+Some configs are explicitly defined in the .tf file, while others are taken as default. 
+Those default resource configs are NOT considered part of Desired state. If say security group is modified from console ( which was not mentioned in the .tf file , in the first place ), and we run terraform plan, it will show the state as No Change and Desired state = Current state.
+
+As Best Practice, Explicitly define all the desired attributes in your configuration and keep the default attributes as minimal as possible.
+
+
+
+Terraform Refresh:
+Need not be run explicitly , as terraform automatically performs the refresh action as part of both terraform plan and terraform apply.
+This could lead to state file modification.
+
+
+terraform -refresh-only is a flag used with terraform apply to update Terraform's state file without making any actual changes to your infrastructure. 
+
+Main Purpose
+It synchronizes your state file with the actual state of your cloud resources, useful when:
+
+Resources changed outside Terraform — Someone manually modified infrastructure in the cloud console, and you want Terraform's state to reflect those changes without reapplying your configuration.
+Reconcile state drift — Infrastructure has drifted from what Terraform expects. This updates the state to match reality without changing anything.
+Safe state updates — You want to verify current resource state and update the state file without the risk of accidentally destroying or modifying resources.
+
+
+Example Scenario
+1. You have an EC2 instance managed by Terraform
+2. Someone manually changes the instance type in AWS Console
+3. Your Terraform state is now out of sync
+4. Run: terraform apply -refresh-only
+5. Terraform detects the change and updates your local state
+6. No resources are modified; state is now accurate
+
+
+terraform apply — Makes changes to match your configuration
+terraform apply -refresh-only — Only updates the state file, no infrastructure changes
+
+
+
+terreform.lock.hcl is called dependency lock file: helps to lock specific provider version. it prevents provider version changes.
+versioning of provider is recommended for production, a different version could break or create issues. 
+If you delete the lock file and then run terraform init against a different provider version , it will work.
+
+if we want to use a specific version, we can run terraform init -upgrade, this will update the lock file with the required version.
+
+Attribute:
+Each resource has its associated set of attributes.
+
+Attributes are fields in a resource that hold the values that end up in the state file.
+
