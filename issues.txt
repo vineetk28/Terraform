@@ -16,3 +16,5 @@ If the default VPC does not exist, we get below error.
 │    5: resource "aws_instance" "myec2" {
 │
 ╵
+
+Resolution: Either define a default VPC or mention the subnet id in the resource block.
